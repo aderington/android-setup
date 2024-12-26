@@ -86,18 +86,33 @@ update_zshrc() {
     ghWatch $run_id && notify-send 'run is done!'
   }
   
-  # Load version control information
-  autoload -Uz vcs_info
-  autoload -U colors && colors
-  precmd() { vcs_info }
+  update_prompt() {
+     # Default prompt 
+     local DEFAULT_PROMPT="%n@%m %1~ %# "
 
-  # Format the vcs_info_msg_0_ variable
-  zstyle ':vcs_info:git:*' formats '%b'
+     # Check if in a Git repository
+     if git rev-parse --is-inside-work-tree &>/dev/null; then
+        # If in a Git repo, set a specific prompt with branch name
+        local branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-  # Set up the prompt (with git branch name)
-  setopt PROMPT_SUBST
+        autoload -U colors && colors
 
-  PROMPT='[%1~]%F{green}(${vcs_info_msg_0_})%F{reset_color%$}$ '
+        # Format the vcs_info_msg_0_ variable
+        zstyle ':vcs_info:git:*' formats '%b'
+
+        # Set up the prompt (with git branch name)
+        PROMPT="[%1~] %{$fg[green]%}$branch_name%{$reset_color%} %# "
+     else
+        # Use default prompt
+        PROMPT="$DEFAULT_PROMPT"
+     fi   
+  }
+  
+  # Call the update_prompt function to set the initial prompt
+  update_prompt
+    
+  # Automatically update the prompt when the directory changes
+  chpwd_functions+=(update_prompt)
 
   EOL
 
