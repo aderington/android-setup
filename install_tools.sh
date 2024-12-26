@@ -95,11 +95,6 @@ update_zshrc() {
         # If in a Git repo, set a specific prompt with branch name
         local branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-        autoload -U colors && colors
-
-        # Format the vcs_info_msg_0_ variable
-        zstyle ':vcs_info:git:*' formats '%b'
-
         # Set up the prompt (with git branch name)
         PROMPT="[%1~] %{$fg[green]%}$branch_name%{$reset_color%} %# "
      else
@@ -113,6 +108,9 @@ update_zshrc() {
     
   # Automatically update the prompt when the directory changes
   chpwd_functions+=(update_prompt)
+      
+  # Automatically update the prompt when the branch changes
+  precmd_functions+=(update_prompt)
 
   EOL
 
