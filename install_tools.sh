@@ -2,9 +2,9 @@
 
 # Update PATH for given package
 update_path() {
-  echo "Updating PATH to include $1..."
-  
-  # Create or update the .zshrc file with the aliases
+  set +x
+
+  # Create or update the .zshrc file with updated PATH
   cat <<EOL>> ~/.zshrc
 
   # Add $1 executables to PATH
@@ -14,10 +14,24 @@ EOL
 # Do NOT update the indentation of 'EOL' as the script will fail if 'EOL' has any indentation
 
   source ~/.zshrc
-  cat ~/.zshrc
-  echo $PATH
-  echo ".zshrc has been updated and changes applied."
+  set -x
+}
 
+# Update PATH for given package
+update_java_home() {
+  set +x
+
+  # Create or update the .zshrc file with JAVA_HOME
+  cat <<EOL>> ~/.zshrc
+
+  export JAVA_HOME="$(brew --prefix openjdk@$1)"
+  
+EOL
+# Do NOT update the indentation of 'EOL' as the script will fail if 'EOL' has any indentation
+
+  source ~/.zshrc
+  set -x
+  echo $JAVA_HOME
 
 }
 
@@ -28,7 +42,7 @@ install_homebrew() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   # Update path to include brew
-  update_path brew /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
+  update_path brew /opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
 
   fi
 }
@@ -36,22 +50,24 @@ install_homebrew() {
 # Function to install Git, GitHub CLI, Gradle, and Android Studio
 install_packages() {
   echo "Installing Git..."
-  /usr/bin/brew install git
+  brew install git
   
   echo "Installing GitHub CLI..."
-  /usr/bin/brew install gh
+  brew install gh
 
   echo "Installing Java 11..."
-  /usr/bin/brew install openjdk@11 
+  brew install openjdk@11 
 
   echo "Installing Java 17..."
-  /usr/bin/brew install openjdk@17 
-  
+  brew install openjdk@17 
+
+  update_java_home 17
+
   echo "Installing Gradle..."
-  /usr/bin/brew install gradle
+  brew install gradle
   
   echo "Installing Android Studio..."
-  /usr/bin/brew install --cask android-studio
+  brew install --cask android-studio
 
   update_path android-studio ~/Android/sdk/platform-tools
   update_path gradle /usr/local/opt/gradle/bin
@@ -64,9 +80,6 @@ update_zshrc() {
   
   # Create or update the .zshrc file with the aliases
   cat <<EOL>> ~/.zshrc
-
-  # Set Java to default to v17
-  export JAVA_HOME=\$(/usr/libexec/java_home -v 17)
 
   # Common aliases for Git
   alias g='git'
@@ -91,25 +104,28 @@ update_zshrc() {
   # Common aliases for GitHub
   alias ghWatch='gh run watch'
   ghRun() {
-    if [ $# -lt 2 ]
+    if [ \$# -lt 1 ]
     then
-      echo "Usage: $funcstack[1] <Action filename> <branch>"
+      echo "Usage: \$funcstack[1] <Action filename>"
       return
     fi
 
-    gh workflow run $1 -r $2
+    local branch_name=\$(git rev-parse --abbrev-ref HEAD)
+    ghRun \$1 \$branch_name
+    gh workflow run \$1 -r \$branch_name
   }
 
   ghRunWatch() {
-    if [ $# -lt 2 ]
+    if [ \$# -lt 2 ]
     then
-      echo "Usage: $funcstack[1] <Action filename> <branch>"
+      echo "Usage: \$funcstack[1] <Action filename> <branch>"
       return
     fi
 
-    ghRun $1 $2
-    run_id=$(gh run list --json databaseId --workflow=$1 --limit 1 -q '.[0].databaseId')
-    ghWatch $run_id && notify-send 'run is done!'
+    local branch_name=\$(git rev-parse --abbrev-ref HEAD)
+    ghRun \$1 \$branch_name
+    run_id=\$(gh run list --json databaseId --workflow=\$1 --limit 1 -q '.[0].databaseId')
+    ghWatch \$run_id && notify-send 'run is done!'
   }
   
   update_prompt() {
@@ -142,10 +158,8 @@ EOL
 # Do NOT update the indentation of 'EOL' as the script will fail if 'EOL' has any indentation
 
   set -x
-  echo ".zshrc has been updated and changes applied."
   source ~/.zshrc
-  echo ".zshrc updated!"
-  echo $PATH
+  echo ".zshrc has been updated and changes applied."
 }
 
 # Main installation workflow
